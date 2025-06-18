@@ -1,0 +1,4 @@
+[submodule "example/vsl-rpc-demo/cmd/client/src/vsl-blockchain-app"]
+	path = example/vsl-rpc-demo/cmd/client/src/vsl-blockchain-app
+	url = https://github.com/Pi-Squared-Inc/vsl-blockchain-app.git
+	branch = tee-reth-kevm
