@@ -62,11 +62,46 @@ func ExtendPCR(tpm io.ReadWriteCloser, extendData []byte) error {
 
 // Extends the PCR with the digests of the file whose path is given as argument
 func ExtendPCRFileHash(tpm io.ReadWriteCloser, path string) error {
-	extendData, err := os.ReadFile(path)
+	file, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("failed reading file: %v", err)
+		return fmt.Errorf("failed to open file: %w", err)
 	}
-	return ExtendPCR(tpm, extendData)
+	defer file.Close()
+
+	hasherSHA1 := sha1.New()
+	hasherSHA256 := sha256.New()
+	hasherSHA384 := sha512.New384()
+
+	multiWriter := io.MultiWriter(hasherSHA1, hasherSHA256, hasherSHA384)
+
+	if _, err := io.Copy(multiWriter, file); err != nil {
+		return fmt.Errorf("failed to copy file content to hashers: %w", err)
+	}
+
+	// Get the hash sums
+	sha1 := hasherSHA1.Sum(nil)
+	sha256 := hasherSHA256.Sum(nil)
+	sha384 := hasherSHA384.Sum(nil)
+
+	// Extend the PCR
+	pcr := tpmutil.Handle(PCRIndex)
+	err = tpm2.PCRExtend(tpm, pcr, tpm2.AlgSHA384, sha384[:], "")
+	if err != nil {
+		return fmt.Errorf("failed extending PCR %v: %v", PCRIndex, err)
+	}
+	err = tpm2.PCRExtend(tpm, pcr, tpm2.AlgSHA256, sha256[:], "")
+	if err != nil {
+		return fmt.Errorf("failed extending PCR %v: %v", PCRIndex, err)
+	}
+	err = tpm2.PCRExtend(tpm, pcr, tpm2.AlgSHA1, sha1[:], "")
+	if err != nil {
+		return fmt.Errorf("failed extending PCR %v: %v", PCRIndex, err)
+	}
+
+	log.Printf("Extended SHA384 bank with digest: %x\n", sha384)
+	log.Printf("Extended SHA256 bank with digest: %x\n", sha256)
+	log.Printf("Extended SHA1 bank with digest: %x\n", sha1)
+	return nil
 }
 
 // Fetches an attestation report for the TPM and TEE devices

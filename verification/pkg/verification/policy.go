@@ -8,15 +8,9 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	pb "github.com/google/go-tpm-tools/proto/attest"
 	tpmpb "github.com/google/go-tpm-tools/proto/tpm"
 	"github.com/google/go-tpm/legacy/tpm2"
 )
-
-// Currently just a stub
-func getAttestationPolicy() (*pb.Policy, error) {
-	return nil, nil
-}
 
 const (
 	PCRIndex uint32 = 23

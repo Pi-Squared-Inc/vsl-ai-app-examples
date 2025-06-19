@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -89,19 +88,33 @@ func queryAttester(attesterURL string, computation types.Computation, input []st
 
 // First returned value is the claim ID
 func VerifyClaim(app *App, claim *types.TEEComputationClaim, proof *types.TEEComputationClaimVerificationContext) (string, types.SignedSettledVerifiedClaim, error) {
-	log.Println("Submitting claim to VSL...")
 	var vClaim types.SignedSettledVerifiedClaim
+	// 1. Submit claim to VSL
+	claimId, submitTime, err := SubmitClaim(app, claim, proof)
+	if err != nil {
+		return "", vClaim, err
+	}
+	// 2. Periodically query VSL until expiry time is over, to obtain validated claim
+	log.Println("Polling VSL for validated claims...")
+	vClaim, err = app.VSLClient.PollSettledByID(claimId, submitTime, app.ExpirySeconds, app.LoopInterval)
+	if err != nil {
+		return claimId, vClaim, fmt.Errorf("VSL error: %w", err)
+	}
+	return claimId, vClaim, nil
+}
+
+// Returns claim ID and submission time
+func SubmitClaim(app *App, claim *types.TEEComputationClaim, proof *types.TEEComputationClaimVerificationContext) (string, time.Time, error) {
+	log.Println("Submitting claim to VSL...")
+	submitTime := time.Now()
 
 	jsonClaim, err := json.Marshal(claim)
 	if err != nil {
-		return "", vClaim, fmt.Errorf("error marshaling query to verifier: %v", err)
+		return "", time.Now(), fmt.Errorf("error marshaling query to verifier: %v", err)
 	}
-
-	// 1. Submit claim to VSL...
-	submitTime := time.Now()
 	jsonProof, err := json.Marshal(proof)
 	if err != nil {
-		return "", vClaim, fmt.Errorf("failed marshaling proof: %w", err)
+		return "", time.Now(), fmt.Errorf("failed marshaling proof: %w", err)
 	}
 
 	verifiers := make([]string, 1)
@@ -117,54 +130,10 @@ func VerifyClaim(app *App, claim *types.TEEComputationClaim, proof *types.TEECom
 		app.Fee,
 	)
 	if err != nil {
-		return "", vClaim, fmt.Errorf("VSL error: %w", err)
+		return "", time.Now(), fmt.Errorf("VSL error: %w", err)
 	}
 	log.Printf("Claim ID: %s", claimId)
-
-	// Additional step for block_processing_kreth
-	if claim.Computation == types.BlockProcessingKReth {
-		log.Println("Submitting claim to backend for block mirroring...")
-		// Retrieve the block number
-		var inputMap map[string]interface{}
-		err := json.Unmarshal([]byte(claim.Input[0]), &inputMap)
-		if err != nil {
-			return claimId, vClaim, fmt.Errorf("failed to unmarshal input: %w", err)
-		}
-		assumptions, ok := inputMap["assumptions"].(map[string]interface{})
-		if !ok {
-			return claimId, vClaim, fmt.Errorf("assumptions not found or invalid in input: %v", claim.Input[0])
-		}
-		blockNumberHex, ok := assumptions["number"].(string)
-		if !ok {
-			return claimId, vClaim, fmt.Errorf("block number not found in assumptions: %v", claim.Input[0])
-		}
-		blockNumber, err := strconv.ParseUint(blockNumberHex, 0, 64)
-		if err != nil {
-			return claimId, vClaim, fmt.Errorf("failed to parse block number from assumptions: %w", err)
-		}
-		// Get block mirroring backend URL from .env file
-		backendURL := os.Getenv("BLOCK_MIRRORING_BACKEND_URL")
-		if backendURL == "" {
-			return claimId, vClaim, fmt.Errorf("BLOCK_MIRRORING_BACKEND_URL not set in environment variables")
-		}
-		// Submit the claim to the backend for block mirroring
-		success, err := submitClaimToBackend(backendURL, blockNumber, claimId, "MirroringKRethTEE")
-		if err != nil {
-			return claimId, vClaim, fmt.Errorf("failed to submit claim to backend: %w", err)
-		}
-		if !success {
-			return claimId, vClaim, fmt.Errorf("failed to submit claim to backend for block mirroring")
-		}
-		log.Printf("Claim successfully submitted to backend for block mirroring for block number %d", blockNumber)
-	}
-
-	// 2. Periodically query VSL until expiry time is over, to obtain validated claim
-	log.Println("Polling VSL for validated claims...")
-	vClaim, err = app.VSLClient.PollSettledByID(claimId, submitTime, app.ExpirySeconds, app.LoopInterval)
-	if err != nil {
-		return claimId, vClaim, fmt.Errorf("VSL error: %w", err)
-	}
-	return claimId, vClaim, nil
+	return claimId, submitTime, nil
 }
 
 func generateNonce(app *App) []byte {

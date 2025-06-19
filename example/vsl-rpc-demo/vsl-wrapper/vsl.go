@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"sync"
 	"time"
 
 	types "base-tee/pkg/abstract_types"
@@ -18,6 +19,7 @@ import (
 
 type VSL struct {
 	client *rpc.Client
+	mtx    sync.Mutex
 }
 
 // Balances in VSL, not atto
@@ -29,7 +31,7 @@ func DialVSL(host string, port string) (*VSL, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed dialing VSL: %w", err)
 	}
-	return &VSL{client}, nil
+	return &VSL{client: client, mtx: sync.Mutex{}}, nil
 }
 
 // Generates a new keypair+address, and preloads the account with 1000 VSL
@@ -102,6 +104,9 @@ func (vsl *VSL) FundBalance(addr string, amount *big.Int, bank_priv *ecdsa.Priva
 // Amount is specified in atto-VSL (= 10^-18 VSL).
 func (vsl *VSL) Pay(key *ecdsa.PrivateKey, from string, to string, amount *big.Int) (string, error) {
 	var claimId *string
+	// All endpoints that need a nonce must be within critical sections
+	vsl.mtx.Lock()
+	defer vsl.mtx.Unlock()
 	u64Nonce, err := vsl.GetAccountNonce(from)
 	if err != nil {
 		return "", fmt.Errorf("failed retrieving nonce: %s", err)
@@ -143,6 +148,9 @@ func (vsl *VSL) Pay(key *ecdsa.PrivateKey, from string, to string, amount *big.I
 
 func (vsl *VSL) SubmitClaim(key *ecdsa.PrivateKey, claim string, claimType string, proof string, verifiers []string, client string, expiry_seconds uint64, fee *big.Int) (string, error) {
 	var claimId *string
+	// All endpoints that need a nonce must be within critical sections
+	vsl.mtx.Lock()
+	defer vsl.mtx.Unlock()
 	exp_timestamp := uint64(time.Now().Unix()) + expiry_seconds
 	u64Nonce, err := vsl.GetAccountNonce(client)
 	if err != nil {
@@ -201,6 +209,9 @@ func (vsl *VSL) SubmitClaim(key *ecdsa.PrivateKey, claim string, claimType strin
 
 func (vsl *VSL) Settle(key *ecdsa.PrivateKey, verifierAddr string, claimID string) (string, error) {
 	var validatedId string
+	// All endpoints that need a nonce must be within critical sections
+	vsl.mtx.Lock()
+	defer vsl.mtx.Unlock()
 	u64Nonce, err := vsl.GetAccountNonce(verifierAddr)
 	if err != nil {
 		return "", fmt.Errorf("failed retrieving nonce: %s", err)

@@ -1,9 +1,10 @@
 package client
 
 import (
+	types "base-tee/pkg/abstract_types"
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
 	"log"
 	"math/big"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -23,7 +25,7 @@ var (
 	src_dir               = filepath.Dir(currentFile) + "/src/"
 	program               = src_dir + "mirroring-reth-kevm"
 	blocks_dir            = "blocks/"
-	stop_at_first_failure = true
+	stop_at_first_failure = false
 )
 
 var blockProcessingKRethCmd = &cobra.Command{
@@ -130,7 +132,7 @@ func blockProcessingRequests(ctx context.Context, cancel context.CancelFunc) {
 		}
 
 		log.Printf("Checking for JSON files in %s...", blocks_dir)
-		files, err := ioutil.ReadDir(blocks_dir)
+		files, err := os.ReadDir(blocks_dir)
 		if err != nil {
 			log.Printf("Failed to read blocks directory: %v", err)
 			time.Sleep(5 * time.Second)
@@ -150,7 +152,7 @@ func blockProcessingRequests(ctx context.Context, cancel context.CancelFunc) {
 				found = true
 				filePath := filepath.Join(blocks_dir, file.Name())
 				log.Printf("Found JSON file: %s", filePath)
-				data, err := ioutil.ReadFile(filePath)
+				data, err := os.ReadFile(filePath)
 				if err != nil {
 					log.Printf("Failed to read file %s: %v", filePath, err)
 					continue
@@ -162,15 +164,24 @@ func blockProcessingRequests(ctx context.Context, cancel context.CancelFunc) {
 					continue
 				}
 
-				claim, _ := json.Marshal(parsed["claim"])
+				byteClaim, _ := json.Marshal(parsed["claim"])
 				contextData, _ := json.Marshal(parsed["context"])
 
 				log.Printf("Processing and requesting verification for claim and context from %s", filePath)
 				computationInput := make([]string, 2)
-				computationInput[0] = string(claim)
+				computationInput[0] = string(byteClaim)
 				computationInput[1] = string(contextData)
-				if err := PerformRelyingPartyCLI(APP, ATTESTER_ENDPOINT, "block_processing_kreth", computationInput); err != nil {
-					log.Printf("PerformRelyingParty failed: %v", err)
+				claim, proof, err := AttestAndGenClaim(APP, ATTESTER_ENDPOINT, "block_processing_kreth", computationInput)
+				if err != nil {
+					log.Printf("Claim generation failed: %v", err)
+					if stop_at_first_failure {
+						log.Println("Stopping block processing due to failure.")
+						cancel() // Cancel context to stop runBlockProcessingReth
+						return
+					}
+				}
+				if err = submitToBackend(APP, claim, proof); err != nil {
+					log.Printf("Submitting block to backend failed: %v", err)
 					if stop_at_first_failure {
 						log.Println("Stopping block processing due to failure.")
 						cancel() // Cancel context to stop runBlockProcessingReth
@@ -189,14 +200,59 @@ func blockProcessingRequests(ctx context.Context, cancel context.CancelFunc) {
 
 		if !found {
 			log.Println("No JSON files found, waiting for next check...")
+			time.Sleep(5 * time.Second)
 		}
-		time.Sleep(5 * time.Second)
 	}
+}
+
+func submitToBackend(app *App, claim *types.TEEComputationClaim, proof *types.TEEComputationClaimVerificationContext) error {
+	// First: Submit claim to VSL
+	claimId, _, err := SubmitClaim(app, claim, proof)
+	if err != nil {
+		return err
+	}
+
+	// Next: submit claim to block mirroring backend
+	// Retrieve the block number
+	log.Println("Submitting claim to backend for block mirroring...")
+	var inputMap map[string]interface{}
+	err = json.Unmarshal([]byte(claim.Input[0]), &inputMap)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal input: %w", err)
+	}
+	assumptions, ok := inputMap["assumptions"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("assumptions not found or invalid in input: %v", claim.Input[0])
+	}
+	blockNumberHex, ok := assumptions["number"].(string)
+	if !ok {
+		return fmt.Errorf("block number not found in assumptions: %v", claim.Input[0])
+	}
+	blockNumber, err := strconv.ParseUint(blockNumberHex, 0, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse block number from assumptions: %w", err)
+	}
+	// Get block mirroring backend URL from .env file
+	backendURL := os.Getenv("BLOCK_MIRRORING_BACKEND_URL")
+	if backendURL == "" {
+		return fmt.Errorf("BLOCK_MIRRORING_BACKEND_URL not set in environment variables")
+	}
+	// Submit the claim to the backend for block mirroring
+	success, err := submitClaimToBackend(backendURL, blockNumber, claimId, "MirroringKRethTEE")
+	if err != nil {
+		return fmt.Errorf("failed to submit claim to backend: %w", err)
+	}
+	if !success {
+		return fmt.Errorf("failed to submit claim to backend for block mirroring")
+	}
+	log.Printf("Claim successfully submitted to backend for block mirroring for block number %d", blockNumber)
+	return nil
 }
 
 func init() {
 	blockProcessingKRethCmd.Flags().BoolVar(&Zero_Nonce, "zero-nonce", false, "Sets nonce to zero when requesting attestation report. Useful for testing.")
 
 	blockProcessingKRethCmd.Flags().Uint64Var(&Fee, "fee", 1*(1e18), "Fee promised for claim verification (in atto-VSL).")
+	blockProcessingKRethCmd.Flags().BoolVar(&stop_at_first_failure, "fail-stop", false, "Whether to stop the client on the first error encountered, or keep polling for new blocks. By default, false (will not stop).")
 	clientCmd.AddCommand(blockProcessingKRethCmd)
 }

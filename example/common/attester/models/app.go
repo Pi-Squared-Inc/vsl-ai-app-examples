@@ -86,6 +86,10 @@ func (app *App) HandleTEEQuery(c fiber.Ctx) error {
 	defer app.TPMMutex.Unlock()
 	// For logging purposes, keep track of duration:
 	start := time.Now()
+	defer func() {
+		duration := time.Since(start).Seconds()
+		c.Locals("duration", duration)
+	}()
 	switch query.Computation {
 	case types.InferImageClass:
 		if len(query.Input) != 1 {
@@ -130,9 +134,6 @@ func (app *App) HandleTEEQuery(c fiber.Ctx) error {
 			"reason": err.Error(),
 		})
 	}
-
-	duration := time.Since(start).Seconds()
-	c.Locals("duration", duration)
 
 	return c.JSON(fiber.Map{
 		"result": answer,

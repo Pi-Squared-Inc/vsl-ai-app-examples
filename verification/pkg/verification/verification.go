@@ -14,8 +14,6 @@ import (
 func VerifyTEEComputationClaim(claim *types.TEEComputationClaim, verificationContext *types.TEEComputationClaimVerificationContext) error {
 	log.Println("Verifying claim...")
 
-	// Step 1: Check the signatures and well-formedness of the attestation report
-	// Signatures includes both TEE signature and TPM signature.
 	trustedAKs, err := getTrustedAKs()
 	if err != nil {
 		return fmt.Errorf("couldn't verify claim, failed to get trusted keys: %w", err)
@@ -33,24 +31,6 @@ func VerifyTEEComputationClaim(claim *types.TEEComputationClaim, verificationCon
 	})
 	if err != nil {
 		return fmt.Errorf("failed to verify: %w", err)
-	}
-
-	// At this point, we know have an authentic & untampered attestation report from a
-	// real TEE environment.
-	//
-	// Step 2: Check the measurements inside the report using the appraisal policy supplied
-	// in the verificationContext.
-	//
-	// NOTE: This is just a stub. The verificationContext.Policy field is not properly filled.
-	// More documentation on attest.Policy is needed: what exactly can it check? Do we need to use
-	// a lower level library than go-tpm-tools?
-	policy, err := getAttestationPolicy()
-	if err != nil {
-		return fmt.Errorf("couldn't verify claim, failed to get attestation policy: %w", err)
-	}
-	err = gotpm.EvaluatePolicy(machineState, policy)
-	if err != nil {
-		return fmt.Errorf("attestation report failed appraisal policy: %w", err)
 	}
 
 	if !machineState.GetSecureBoot().GetEnabled() {

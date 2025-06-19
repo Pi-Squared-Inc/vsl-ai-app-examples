@@ -14,12 +14,42 @@ KEVM_REPO="https://github.com/Pi-Squared-Inc/evm-semantics.git"
 export DEBIAN_FRONTEND=noninteractive
 export TZ=America/Chicago
 
+# non-interactive mode
+NON_INTERACTIVE=0
+for arg in "$@"; do
+  if [[ "$arg" == "-y" ]]; then
+    NON_INTERACTIVE=1
+  fi
+done
+
+# Function to ask for confirmation
+ask_confirm() {
+  local prompt="$1"
+  if [[ $NON_INTERACTIVE -eq 1 ]]; then
+    echo "y"
+  else
+    read -p "$prompt" confirm
+    echo "$confirm"
+  fi
+}
+
+# Function to ask for input with a prompt and a default value
+ask_input() {
+  local prompt="$1"
+  if [[ $NON_INTERACTIVE -eq 1 ]]; then
+    echo ""
+  else
+    read -p "$prompt" input
+    echo "$input"
+  fi
+}
+
 # Save the current working directory
 CURRENT_DIR=$(pwd)
 
 echo "Setting up KReth..."
 echo "============================="
-read -p ">>> Checking and installing LLVM version ${LLVM_VERSION} (which will be set to default) if needed. Do you want to continue? [y/N]: " confirm
+confirm=$(ask_confirm ">>> Checking and installing LLVM version ${LLVM_VERSION} (which will be set to default) if needed. Do you want to continue? [y/N]: ")
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
   echo "Exiting setup."
   exit 0
@@ -57,7 +87,7 @@ fi
 
 
 # Check if the user wants to continue with Rust installation
-read -p ">>> Checking and installing Rust version ${RUST_VERSION} (which will be set to default) if needed. Do you want to continue? [y/N]: " confirm
+confirm=$(ask_confirm ">>> Checking and installing Rust version ${RUST_VERSION} (which will be set to default) if needed. Do you want to continue? [y/N]: ")
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
   echo "Exiting setup."
   exit 0
@@ -101,7 +131,7 @@ fi
 export CARGO_NET_GIT_FETCH_WITH_CLI=true
 
 # Check if the user wants to continue with K and KEVM installation
-read -p ">>> Checking and installing K and KEVM if needed. Do you want to continue? [y/N]: " confirm
+confirm=$(ask_confirm ">>> Checking and installing K and KEVM if needed. Do you want to continue? [y/N]: ")
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
   echo "Exiting setup."
   exit 0
@@ -130,7 +160,7 @@ echo "============END=============="
 
 # Ask user for installation directory for K framework and KEVM
 echo "Please provide absolute path for the installation directory."
-read -p ">>> Enter installation directory for K framework and KEVM [default: $HOME/pkg/]: " INSTALL_DIR
+INSTALL_DIR=$(ask_input ">>> Enter installation directory for K framework and KEVM [default: $HOME/pkg/]: ")
 INSTALL_DIR="${INSTALL_DIR:-$HOME/pkg/}"
 # Ensure the installation directory exists
 mkdir -p "$INSTALL_DIR"
@@ -145,7 +175,7 @@ if [ -d "$INSTALL_DIR/k" ]; then
   echo "Please also ensure that you have added the K binary to your PATH, i.e., add" 
   echo "export PATH=\"${INSTALL_DIR}/k/k-distribution/target/release/k/bin:\$PATH\""
   echo "to your ~/.bashrc file."
-  read -p ">>> Have you done this? [y/N]: " confirm
+  confirm=$(ask_confirm ">>> Have you done this? [y/N]: ")
   if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     echo "Please ensure the correct version of K is installed and added to your PATH."
     echo "Exiting setup."
@@ -172,7 +202,7 @@ if [ -d "$INSTALL_DIR/evm-semantics" ]; then
   echo "Please manually ensure the correct branch (${KEVM_BRANCH}) and commit (${KEVM_COMMIT}) of KEVM is installed."
   echo "Please also ensure that you have added the KEVM_DIR to your environment, i.e., add"
   echo "export KEVM_DIR=\"${INSTALL_DIR}/evm-semantics\" to your ~/.bashrc file."
-  read -p ">>> Have you done this? [y/N]: " confirm
+  confirm=$(ask_confirm ">>> Have you done this? [y/N]: ")
   if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     echo "Please ensure the correct branch and commit of KEVM is installed and added to your environment."
     echo "Exiting setup."
@@ -200,7 +230,7 @@ cd $CURRENT_DIR
 SCRIPT_DIR=$(dirname $(realpath $BASH_SOURCE))
 cd $SCRIPT_DIR
 ## To ensure a clean build, we will remove Cargo.lock, target directory, and ~/.cargo/git/
-read -p ">>> To ensure a clean build, is it okay to remove (i) 'Cargo.lock', (ii) 'target' directory, and (iii) '~/.cargo/git/'? [y/N]: " confirm
+confirm=$(ask_confirm ">>> To ensure a clean build, is it okay to remove (i) 'Cargo.lock', (ii) 'target' directory, and (iii) '~/.cargo/git/'? [y/N]: ")
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
   echo "Cleaning the target directory..."
   rm -rf ~/.cargo/git/
@@ -219,7 +249,7 @@ echo "Build completed successfully."
 ## Move the built binary
 if [ -f "./block_processing_kreth" ]; then
   echo "⚠️ './block_processing_kreth' already exists."
-  read -p ">>> Do you want to overwrite it? [y/N]: " confirm
+  confirm=$(ask_confirm ">>> Do you want to overwrite it? [y/N]: ")
   if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     echo "Keeping the existing binary './block_processing_kreth'."
     echo "If you want to update it, please manually copy the newly compiled binary from './target/release/block_processing_kreth'."

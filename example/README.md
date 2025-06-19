@@ -46,7 +46,7 @@ Depending on whether you are running the demo with or without the front end, the
 
 4. Git clone this repository
 
-5. [Optional] Run a local VSL node via `docker compose`.
+5. [Optional] Run a local VSL node or connect to a remote one. For local deployment there is an example `docker-compose.vsl.yml` file in the repo. You can find more details about running VSL in the [`VSL-CLI`](https://github.com/Pi-Squared-Inc/vsl-cli) and [`VSL-SDK`](https://github.com/Pi-Squared-Inc/vsl-sdk) repos.
     ```bash
     cd <vsl-ai-client-dir>/example
     docker compose -f docker-compose.vsl.yml up -d
