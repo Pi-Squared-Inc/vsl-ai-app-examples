@@ -46,13 +46,6 @@ interface ValidationRecordsTableProps {
 }
 
 export function ValidationRecordsTable({ records, isLoading, isPaging = false, currentPage, totalPages, onPageChange, userHistoryOnly = false, address = undefined}: ValidationRecordsTableProps) {
-  if (userHistoryOnly && address == null) {
-    return <div className="flex justify-center items-center h-full"> {/* Centers horizontally and vertically if parent allows */}
-              <p className="text-2xl text-center mt-12">
-                Connect your wallet to see your own computation history!
-              </p>
-           </div>
-  }
   const dialog = useDialog();
 
   const effectiveTotalPages = useMemo(() => (totalPages > 0 ? totalPages : 1), [totalPages]);
@@ -69,6 +62,14 @@ export function ValidationRecordsTable({ records, isLoading, isPaging = false, c
       </TableRow>
     ));
   }, []);
+
+  if (userHistoryOnly && address == null) {
+    return <div className="flex justify-center items-center h-full"> {/* Centers horizontally and vertically if parent allows */}
+              <p className="text-2xl text-center mt-12">
+                Connect your wallet to see your own computation history!
+              </p>
+           </div>
+  }
 
   const handleViewError = (title: string, content: string, isImage: boolean = false) => {
     dialog.setTitle(title);

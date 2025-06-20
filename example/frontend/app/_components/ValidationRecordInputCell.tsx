@@ -47,7 +47,7 @@ export function ValidationRecordInputCell({ record, onViewError }: ValidationRec
       blobURL = await fetchInputFromVSL(record);
     }
     if (record.type == "plain_text") {
-      let blobText = await (await fetch(blobURL!).then(r => r.blob())).text();
+      const blobText = await (await fetch(blobURL!).then(r => r.blob())).text();
       onViewError("Input", blobText);
     } else {
       onViewError("Input", blobURL!);

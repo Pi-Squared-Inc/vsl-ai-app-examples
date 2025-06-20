@@ -35,7 +35,6 @@ export default function Help() {
     helpDialog.setIsJson(false);
     helpDialog.setIsLoading(false);
     helpDialog.open();
-    console.log("handleClick");
   };
   return (
     <>

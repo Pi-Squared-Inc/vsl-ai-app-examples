@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccount } from "wagmi";
-import { all } from "axios";
 
 const PAGE_SIZE = 25;
 const REFRESH_INTERVAL = 10; // seconds
@@ -30,9 +29,7 @@ export default function Home() {
   const fetchRecords = useCallback(async (page: number, pageSize: number) => {
     try {
       setIsFetching(true);
-      var response : Response;
-      console.log(userHistoryOnly)
-      response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${apiRoute}?page=${page}&page_size=${pageSize}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${apiRoute}?page=${page}&page_size=${pageSize}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -51,7 +48,7 @@ export default function Home() {
     } finally {
       setIsFetching(false);
     }
-  }, [apiRoute, address]);
+  }, [apiRoute, userHistoryOnly]);
 
   useEffect(() => {
     // Initial fetch to load records when the provider mounts
@@ -115,13 +112,13 @@ export default function Home() {
 
   useEffect(() => {
     if (userHistoryOnly) {
-      let addr = address ? address : '0xDEADBEEF'
+      const addr = address ? address : '0xDEADBEEF'
       setApiRoute(`${all_route}/${addr}`);
     } else {
       setApiRoute(all_route);
     }
     goToPage(1);
-  }, [userHistoryOnly, address]);
+  }, [userHistoryOnly, address, goToPage]);
 
   function HistoryChooser() {
     if (userHistoryOnly) {

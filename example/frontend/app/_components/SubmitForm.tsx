@@ -185,7 +185,7 @@ export default function SubmitForm({
       formData.append("type", values.type);
       formData.append("sender_address", address!);
       formData.append("payment_claim_id", paymentClaimId);
-      var blobURL = "";
+      let blobURL = "";
       if (values.type === "img_class" && values.image) {
         formData.append("image", values.image);
         computeType = "img_class";

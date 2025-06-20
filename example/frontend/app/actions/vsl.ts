@@ -70,5 +70,6 @@ export function pay(
 }
 
 export function getSettledClaimById(claim_id: string) {
+  // eslint-disable-next-line
   return call<any>("vsl_getSettledClaimById", { claim_id: claim_id });
 }
