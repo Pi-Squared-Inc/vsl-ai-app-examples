@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
+import WalletConnect from "./Account";
+import cvImage from "../_assets/help_cv.png";
+import Image from "next/image";
 
 // Dynamically import ReactJson to avoid SSR issues
 const ReactJson = dynamic(() => import("react-json-view"), { ssr: false });
@@ -11,8 +14,46 @@ interface DialogProps {
   title: string;
   content: string;
   isJson?: boolean;
+  isHelp?: boolean;
+  isImageBlobURL?: boolean;
   isLoading?: boolean;
 }
+
+const HelpDisplay = () => (
+<div className="flex flex-col p-6 rounded-lg shadow-lg text-gray-800 dark:text-gray-200 max-w-2xl mx-auto my-8">
+  <p className="text-lg text-left mb-2">
+    This website showcases simple AI capabilities inside TEEs,
+    settled by <b>Pi Squared</b> on the <b>VSL</b>.
+  </p>
+  <p className="text-lg text-left">
+    To get started, first click the "Connect" button in the upper-right corner
+    to connect your Metamask wallet, or connect using the button below:
+  </p>
+  <div className="flex justify-center mb-2">
+    <WalletConnect />
+  </div>
+  <p className="text-lg text-left">
+    To perform an <b>image classification</b> task, drag or upload your image to the form and click "Confirm" (max size is 10MB).
+    Or click the goldfish below the form to use our sample image:
+  </p>
+  <div className="text-lg flex justify-center">
+    <Image src={cvImage} alt="Image clasification how-to" width={500} height={80} className="rounded" />
+  </div>
+  <p className="text-lg text-left mb-2">
+    Then accept the two Metamask signature requests, which will allow payment and and authorization of your AI request.
+    Each request is charged <b>20 VSL</b>.
+  </p>
+    <p className="text-lg text-left mb-2">
+    To perform a <b>text generation</b> task, switch the computation type to Plain text and write a prompt (max 100 characters).
+    Sign as before, and wait for the result!
+  </p>
+    <p className="text-lg text-left">
+    Once your request is completed, click the "View" button under the "Result" column to see the model's output.
+
+    The computation is now settled on the VSL. Follow the claim ID to visit the settled claim on the <b>VSL explorer</b>.
+  </p>
+</div>
+);
 
 export function Dialog({
   isOpen,
@@ -20,6 +61,8 @@ export function Dialog({
   title,
   content,
   isJson = false,
+  isImageBlobURL = false,
+  isHelp = false,
   isLoading = false,
 }: DialogProps) {
   if (!isOpen) return null;
@@ -92,7 +135,13 @@ export function Dialog({
         </pre>
       );
     }
-  } else {
+  } else if (isHelp) {
+    // Help dialogs displays a nicely formatted constant message
+    contentDisplay = HelpDisplay();
+  } else if (isImageBlobURL) {
+    contentDisplay = <img className="blob-to-image" src={content}></img>;
+  }
+  else {
     // For non-JSON content, display as plain text
     contentDisplay = (
       <pre className="bg-muted text-wrap whitespace-pre-line p-4 rounded overflow-auto max-h-[80vh] text-sm text-foreground">

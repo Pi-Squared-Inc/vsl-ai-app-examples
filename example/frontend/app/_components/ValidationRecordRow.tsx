@@ -3,11 +3,12 @@ import { VerificationRecord } from "@/types";
 import Link from "next/link";
 import { ValidationRecordCreatedAtCell } from "./ValidationRecordCreatedAtCell";
 import { ValidationRecordResultCell } from "./ValidationRecordResultCell";
+import { ValidationRecordInputCell } from "./ValidationRecordInputCell";
 
 interface ValidationRecordRowProps {
   record: VerificationRecord;
   // onViewData: (title: string, recordId: number, contentType: "claim" | "proof") => void;
-  onViewError: (title: string, content: string) => void;
+  onViewError: (title: string, content: string, isImageBlobURL: boolean) => void;
 }
 
 export function ValidationRecordRow({
@@ -31,7 +32,7 @@ export function ValidationRecordRow({
       <TableCell className="px-4 whitespace-nowrap align-middle overflow-hidden text-ellipsis">
         {record.claim_id ? (
           <Link
-            href={`https://vsl.pi2.network/claim/${record.claim_id}`}
+            href={`https://explorer.vsl.pi2.network/claim/${record.claim_id}`}
             className="text-sm underline text-purple-500 font-medium"
             target="_blank"
             rel="noopener noreferrer"
@@ -42,7 +43,8 @@ export function ValidationRecordRow({
           <span className="text-sm">—</span>
         )}
       </TableCell>
-      <ValidationRecordResultCell record={record} onViewError={onViewError} />
+      <ValidationRecordInputCell record={record} onViewError={(title: string, content: string) => onViewError(title, content, record.type == "img_class")} />
+      <ValidationRecordResultCell record={record} onViewError={(title: string, content: string) => onViewError(title, content, false)} />
     </TableRow>
   );
 }

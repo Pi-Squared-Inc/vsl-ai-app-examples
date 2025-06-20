@@ -88,7 +88,6 @@ var backendCmd = &cobra.Command{
 		}()
 
 		// Start the API server
-		api.RegisterClaimAPI(app)
 		api.RegisterVerificationRecordAPI(app, clientApp)
 		go func() {
 			err := app.API.Listen(":" + port)

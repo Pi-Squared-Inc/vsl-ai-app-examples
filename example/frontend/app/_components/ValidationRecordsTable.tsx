@@ -16,32 +16,23 @@ function useDialog() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [isJson, setIsJson] = useState(false);
+  const [isImageBlobURL, setIsImageBlobURL] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const open = () => setIsOpen(true);
   const close = () => setIsOpen(false);
 
   return {
-    state: { isOpen, title, content, isJson, isLoading },
+    state: { isOpen, title, content, isJson, isImageBlobURL, isLoading },
     setTitle,
     setContent,
     setIsJson,
+    setIsImageBlobURL,
     setIsLoading,
     open,
     close,
   };
 }
-
-// Define interfaces for the expected API responses
-// interface ClaimResponse {
-//   claim?: unknown; // Use unknown instead of any
-//   size?: number;
-// }
-
-// interface VerificationContextResponse {
-//   verification_context?: unknown; // Use unknown instead of any
-//   size?: number;
-// }
 
 interface ValidationRecordsTableProps {
   records: VerificationRecord[];
@@ -50,9 +41,18 @@ interface ValidationRecordsTableProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  userHistoryOnly: boolean;
+  address?: string;
 }
 
-export function ValidationRecordsTable({ records, isLoading, isPaging = false, currentPage, totalPages, onPageChange }: ValidationRecordsTableProps) {
+export function ValidationRecordsTable({ records, isLoading, isPaging = false, currentPage, totalPages, onPageChange, userHistoryOnly = false, address = undefined}: ValidationRecordsTableProps) {
+  if (userHistoryOnly && address == null) {
+    return <div className="flex justify-center items-center h-full"> {/* Centers horizontally and vertically if parent allows */}
+              <p className="text-2xl text-center mt-12">
+                Connect your wallet to see your own computation history!
+              </p>
+           </div>
+  }
   const dialog = useDialog();
 
   const effectiveTotalPages = useMemo(() => (totalPages > 0 ? totalPages : 1), [totalPages]);
@@ -70,63 +70,11 @@ export function ValidationRecordsTable({ records, isLoading, isPaging = false, c
     ));
   }, []);
 
-  // const handleViewData = async (title: string, recordId: number, contentType: "claim" | "proof") => {
-  //   dialog.setTitle(title);
-  //   dialog.setContent(`Loading ${contentType} details...`);
-  //   dialog.setIsJson(false);
-  //   dialog.setIsLoading(true);
-  //   dialog.open();
-
-  //   try {
-  //     // Extract the relevant data based on contentType and type assertion
-  //     const contentData = "hello world"; // Placeholder for actual data fetching logic
-
-  //     if (contentData) {
-  //       let finalContent = "";
-  //       let isFinalContentJson = false;
-  //       // Check if contentData is a string (likely a JSON string)
-  //       if (typeof contentData === "string") {
-  //         try {
-  //           // Attempt to parse the JSON string
-  //           const parsedData = JSON.parse(contentData);
-  //           // Re-stringify the parsed object for pretty printing
-  //           finalContent = JSON.stringify(parsedData, null, 2);
-  //           isFinalContentJson = true;
-  //         } catch (parseError) {
-  //           // If parsing fails, it might not be JSON, display as plain text
-  //           console.error("Failed to parse contentData as JSON:", parseError);
-  //           finalContent = contentData;
-  //           isFinalContentJson = false;
-  //         }
-  //       } else if (typeof contentData === "object" && contentData !== null) {
-  //         // If it's already an object (less likely based on user info, but handle defensively)
-  //         finalContent = JSON.stringify(contentData, null, 2);
-  //         isFinalContentJson = true;
-  //       } else {
-  //         // Handle other unexpected types (numbers, booleans, null, etc.)
-  //         finalContent = String(contentData);
-  //         isFinalContentJson = false;
-  //       }
-
-  //       dialog.setContent(finalContent);
-  //       dialog.setIsJson(isFinalContentJson);
-  //     } else {
-  //       // Handle cases where the response was received but didn't contain the expected data
-  //       dialog.setContent(`No ${contentType} data is available for Record ${recordId}`);
-  //       dialog.setIsJson(false);
-  //     }
-  //   } catch (error) {
-  //     dialog.setContent(`Error loading ${contentType} data for Record ${recordId}: ` + (error instanceof Error ? error.message : String(error)));
-  //     dialog.setIsJson(false);
-  //   } finally {
-  //     dialog.setIsLoading(false);
-  //   }
-  // };
-
-  const handleViewError = (title: string, content: string) => {
+  const handleViewError = (title: string, content: string, isImage: boolean = false) => {
     dialog.setTitle(title);
     dialog.setContent(content);
     dialog.setIsJson(false);
+    dialog.setIsImageBlobURL(isImage);
     dialog.setIsLoading(false);
     dialog.open();
   };
@@ -139,6 +87,7 @@ export function ValidationRecordsTable({ records, isLoading, isPaging = false, c
         title={dialog.state.title}
         content={dialog.state.content}
         isJson={dialog.state.isJson}
+        isImageBlobURL={dialog.state.isImageBlobURL}
         isLoading={dialog.state.isLoading}
       />
 
@@ -150,6 +99,7 @@ export function ValidationRecordsTable({ records, isLoading, isPaging = false, c
               <ValidationRecordsTableHeaderCell>{`Type`}</ValidationRecordsTableHeaderCell>
               <ValidationRecordsTableHeaderCell>{`Status`}</ValidationRecordsTableHeaderCell>
               <ValidationRecordsTableHeaderCell>{`Claim`}</ValidationRecordsTableHeaderCell>
+              <ValidationRecordsTableHeaderCell>{`Input`}</ValidationRecordsTableHeaderCell>
               <ValidationRecordsTableHeaderCell>{`Result`}</ValidationRecordsTableHeaderCell>
             </TableRow>
           </TableHeader>

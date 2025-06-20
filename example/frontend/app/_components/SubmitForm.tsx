@@ -185,15 +185,22 @@ export default function SubmitForm({
       formData.append("type", values.type);
       formData.append("sender_address", address!);
       formData.append("payment_claim_id", paymentClaimId);
+      var blobURL = "";
       if (values.type === "img_class" && values.image) {
         formData.append("image", values.image);
         computeType = "img_class";
         hashedInput = await hashFileSha256(values.image!);
+        blobURL = URL.createObjectURL(values.image!);
       }
       if (values.type === "plain_text" && values.text) {
         formData.append("prompt", values.text);
         computeType = "text_gen";
         hashedInput = await hashStringSha256(values.text);
+        blobURL = URL.createObjectURL(new Blob(
+            [values.text!], {
+              type: 'text/plain'
+            })
+          )
       }
       const computeSignatureComponents = await generateSignatureComponents(
         async ({ message }) => {
@@ -232,6 +239,7 @@ export default function SubmitForm({
         setPreviewUrl(null);
         await fetchBalance(address!);
         await refetch(true);
+        sessionStorage.setItem(result.id, blobURL);
       }
     } catch (error) {
       toast.error("Error during computation: " + error);
@@ -289,7 +297,7 @@ export default function SubmitForm({
                       />
                     ) : (
                       <span className="text-sm text-muted-foreground">
-                        Click or drag an image here to upload
+                        Click or drag an image here to classify it
                       </span>
                     )}
                     <span className="text-xs text-muted-foreground mt-2">
@@ -359,7 +367,7 @@ export default function SubmitForm({
               <FormItem>
                 <FormLabel>Text</FormLabel>
                 <Textarea
-                  placeholder="Enter text for processing"
+                  placeholder="Ask the model something"
                   value={field.value || ""}
                   onChange={(e) => field.onChange(e.target.value)}
                 />

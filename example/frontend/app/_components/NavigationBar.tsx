@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import logoImage from "../_assets/logo.png";
 import WalletConnect from "./Account";
+import Help from "./Help";
 
 export function NavigationBar() {
   return (
@@ -11,6 +12,7 @@ export function NavigationBar() {
       <Link href="/" className="transition-opacity duration-200 hover:opacity-75">
         <Image src={logoImage} alt="Pi Squared Logo" width={80} height={80} className="rounded" />
       </Link>
+      <Help />
       <WalletConnect />
     </nav>
   );

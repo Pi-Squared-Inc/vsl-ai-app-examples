@@ -10,20 +10,29 @@ import { VerificationRecord } from "@/types";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAccount } from "wagmi";
+import { all } from "axios";
 
 const PAGE_SIZE = 25;
 const REFRESH_INTERVAL = 10; // seconds
 
 export default function Home() {
+  const all_route = 'verification_records';
+
   const [isFetching, setIsFetching] = useState(false);
   const [records, setRecords] = useState<VerificationRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [apiRoute, setApiRoute] = useState(all_route);
+  const [userHistoryOnly, setUserHistoryOnly] = useState(false);
+  const { address } = useAccount();
 
   const fetchRecords = useCallback(async (page: number, pageSize: number) => {
     try {
       setIsFetching(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/verification_records?page=${page}&page_size=${pageSize}`, {
+      var response : Response;
+      console.log(userHistoryOnly)
+      response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${apiRoute}?page=${page}&page_size=${pageSize}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -42,7 +51,7 @@ export default function Home() {
     } finally {
       setIsFetching(false);
     }
-  }, []);
+  }, [apiRoute, address]);
 
   useEffect(() => {
     // Initial fetch to load records when the provider mounts
@@ -104,6 +113,53 @@ export default function Home() {
     };
   }, [handleRefresh]);
 
+  useEffect(() => {
+    if (userHistoryOnly) {
+      let addr = address ? address : '0xDEADBEEF'
+      setApiRoute(`${all_route}/${addr}`);
+    } else {
+      setApiRoute(all_route);
+    }
+    goToPage(1);
+  }, [userHistoryOnly, address]);
+
+  function HistoryChooser() {
+    if (userHistoryOnly) {
+      return (
+        <h2 className="text-2xl font-medium mb-4">
+          <span
+            id="switch-to-all"
+            title="View all AI computation history"
+            style={{ opacity: 0.5, cursor: "pointer" }}
+            onClick={() => {
+              setUserHistoryOnly(false);
+            }}
+          >
+            All History |{" "}
+          </span>
+          Your History
+        </h2>
+      );
+    } else {
+      return (
+        <h2 className="text-2xl font-medium mb-4">
+          All History
+          <span
+            id="switch-to-you"
+            title="View your own AI computation history"
+            style={{ opacity: 0.5, cursor: "pointer" }}
+            onClick={() => {
+              setUserHistoryOnly(true);
+            }}
+          >
+            {" "}
+            | Your History
+          </span>
+        </h2>
+      );
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 flex flex-col min-h-screen">
       <NavigationBar />
@@ -116,7 +172,7 @@ export default function Home() {
         </div>
         <div className="w-full mt-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-medium mb-4">History</h2>
+            <HistoryChooser />
             <div className="flex items-center gap-4">
               <div className="text-sm text-pi2-purple-50">
                 Auto-refresh in: <span className="font-medium">{secondsUntilRefresh}s</span>
@@ -134,6 +190,8 @@ export default function Home() {
             currentPage={currentPage}
             totalPages={Math.ceil(total / PAGE_SIZE)}
             onPageChange={goToPage}
+            userHistoryOnly={userHistoryOnly}
+            address={address}
           />
         </div>
       </main>

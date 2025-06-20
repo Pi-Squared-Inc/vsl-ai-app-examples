@@ -3,7 +3,6 @@ package api
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 const CHAR_LIMIT int = 100
@@ -85,22 +83,6 @@ func RegisterVerificationRecordAPI(app *models.App, clientApp *client.App) {
 			"allowed": can_submit,
 		})
 	})
-	app.API.Get("/verification_records/:id", func(c fiber.Ctx) error {
-		id := c.Params("id")
-		if id == "" {
-			return c.Status(400).SendString("id is required")
-		}
-		var record models.VerificationRecord
-		err := app.DB.Where("id = ?", id).First(&record).Error
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return c.Status(404).SendString("verification record not found")
-			}
-			log.Println("error fetching verification record: ", err)
-			return c.Status(500).SendString("internal server error")
-		}
-		return c.JSON(record.ToResponse())
-	})
 	app.API.Get("/verification_records", func(c fiber.Ctx) error {
 		page := c.Query("page", "0")
 		pageSize := c.Query("pageSize", "25")
@@ -127,6 +109,54 @@ func RegisterVerificationRecordAPI(app *models.App, clientApp *client.App) {
 
 		var total int64
 		err = app.DB.Model(&models.VerificationRecord{}).
+			Count(&total).Error
+
+		if err != nil {
+			return c.Status(500).SendString("internal server error")
+		}
+
+		verificationRecordsResponse := make([]models.VerificationResponse, 0)
+		for _, verificationRecord := range records {
+			verificationRecordsResponse = append(verificationRecordsResponse, verificationRecord.ToResponse())
+		}
+
+		return c.JSON(fiber.Map{
+			"records": verificationRecordsResponse,
+			"total":   total,
+		})
+	})
+	app.API.Get("/verification_records/:address", func(c fiber.Ctx) error {
+		address := c.Params("address")
+		if address == "" {
+			return c.Status(400).SendString("address is required")
+		}
+		page := c.Query("page", "0")
+		pageSize := c.Query("pageSize", "25")
+		pageInt, err := strconv.Atoi(page)
+		if err != nil || pageInt < 0 {
+			return c.Status(400).SendString("invalid page")
+		}
+		pageSizeInt, err := strconv.Atoi(pageSize)
+		if err != nil || pageSizeInt <= 0 {
+			return c.Status(400).SendString("invalid page size")
+		}
+		offset := pageInt * pageSizeInt
+
+		var records []models.VerificationRecord
+		err = app.DB.Model(&models.VerificationRecord{}).
+			Where("user_address = ?", address).
+			Order("created_at DESC").
+			Limit(pageSizeInt).
+			Offset(offset).
+			Find(&records).Error
+
+		if err != nil {
+			return c.Status(500).SendString("internal server error")
+		}
+
+		var total int64
+		err = app.DB.Model(&models.VerificationRecord{}).
+			Where("user_address = ?", address).
 			Count(&total).Error
 
 		if err != nil {

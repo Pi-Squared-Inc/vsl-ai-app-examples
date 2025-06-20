@@ -42,7 +42,6 @@ func NewApp(vslHost string, vslPort string, verifierAddress string, bankPriv *ec
 	if err != nil {
 		panic("failed to connect database")
 	}
-	db.AutoMigrate(&ValidationRecord{})
 	db.AutoMigrate(&VerificationRecord{})
 	db.AutoMigrate(&UserPaymentRecord{})
 

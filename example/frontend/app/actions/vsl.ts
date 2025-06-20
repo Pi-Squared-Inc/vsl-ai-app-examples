@@ -68,3 +68,7 @@ export function pay(
     },
   });
 }
+
+export function getSettledClaimById(claim_id: string) {
+  return call<any>("vsl_getSettledClaimById", { claim_id: claim_id });
+}
