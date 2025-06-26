@@ -179,6 +179,7 @@ func blockProcessingRequests(ctx context.Context, cancel context.CancelFunc) {
 						cancel() // Cancel context to stop runBlockProcessingReth
 						return
 					}
+					continue
 				}
 				if err = submitToBackend(APP, claim, proof); err != nil {
 					log.Printf("Submitting block to backend failed: %v", err)

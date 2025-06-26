@@ -55,6 +55,11 @@ export default function Home() {
     fetchRecords(0, PAGE_SIZE);
   }, [fetchRecords]);
 
+  useEffect(() => {
+    sessionStorage.clear();
+  }, []);
+
+
   const refetch = useCallback(
     async (backToFirst = false) => {
       let page = currentPage;

@@ -10,7 +10,7 @@ services:
       - "44444:44444"
     networks:
       - vsl-network
-    command: ["--master-account", "{\"account\":\"0x9Cf8Acf0470dA299Adfe42621d1D1F2804ecd29A\",\"initial_balance\":\"1000000000000000000000000000\"}"]
+    command: ["--genesis-json", "{\"accounts\": [{\"id\": \"0x9Cf8Acf0470dA299Adfe42621d1D1F2804ecd29A\",\"balance\": \"1000000000000000000000000000\"}],\"tokens\": []}"]
     healthcheck:
       test:
         - "CMD"

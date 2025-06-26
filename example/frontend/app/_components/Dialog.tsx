@@ -20,20 +20,20 @@ interface DialogProps {
 }
 
 const HelpDisplay = () => (
-<div className="flex flex-col p-6 rounded-lg shadow-lg text-gray-800 dark:text-gray-200 max-w-2xl mx-auto my-8">
+<div className="flex flex-col p-1 rounded-lg shadow-lg text-gray-800 dark:text-gray-200 max-w-3xl mx-auto my-1">
   <p className="text-lg text-left mb-2">
     This website showcases simple AI capabilities inside TEEs,
     settled by <b>Pi Squared</b> on the <b>VSL</b>.
   </p>
   <p className="text-lg text-left">
-    To get started, first click the `&quot;`Connect`&quot;` button in the upper-right corner
+    To get started, first click the &quot;Connect&quot; button in the upper-right corner
     to connect your Metamask wallet, or connect using the button below:
   </p>
   <div className="flex justify-center mb-2">
     <WalletConnect />
   </div>
   <p className="text-lg text-left">
-    To perform an <b>image classification</b> task, drag or upload your image to the form and click `&quot;`Confirm`&quot;` (max size is 10MB).
+    To perform an <b>image classification</b> task, drag or upload your image to the form and click &quot;Confirm&quot; (max size is 10MB).
     Or click the goldfish below the form to use our sample image:
   </p>
   <div className="text-lg flex justify-center">
@@ -48,7 +48,7 @@ const HelpDisplay = () => (
     Sign as before, and wait for the result!
   </p>
     <p className="text-lg text-left">
-    Once your request is completed, click the `&quot;`View`&quot;` button under the `&quot;`Result`&quot;` column to see the model&apos;`s output.
+    Once your request is completed, click the &quot;View&quot; button under the &quot;Result&quot; column to see the model&apos;s output.
 
     The computation is now settled on the VSL. Follow the claim ID to visit the settled claim on the <b>VSL explorer</b>.
   </p>
@@ -139,7 +139,7 @@ export function Dialog({
     // Help dialogs displays a nicely formatted constant message
     contentDisplay = HelpDisplay();
   } else if (isImageBlobURL) {
-    contentDisplay = <Image src={content} alt="Input image to CV computation" />
+    contentDisplay = <Image src={content} width={300} height={300} alt="Input image to CV computation" />
   }
   else {
     // For non-JSON content, display as plain text

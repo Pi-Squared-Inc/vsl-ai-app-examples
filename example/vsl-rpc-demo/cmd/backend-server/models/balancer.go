@@ -27,7 +27,7 @@ type HealthChecker interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-const MAX_QUEUED_TASKS int = 10
+const MAX_QUEUED_TASKS int = 20
 
 func NewBalancer(att_endpoints []string, checker HealthChecker) *LoadBalancer {
 	lb := new(LoadBalancer)
