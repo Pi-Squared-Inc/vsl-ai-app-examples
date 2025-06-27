@@ -76,11 +76,11 @@ NIL
     ```bash
     cd <vsl-ai-client-dir>/example/common/attester
 
-    ./prerequisite.sh 
+    inference/src/prerequisite.sh 
     # Run the above command only if necessary.
     # This will install necessary libraries for image classification computation.
 
-    ./dl-inference-models.sh
+    inference/src/dl-inference-models.sh
     # Run the above command only if necessary.
     # This will download the necessary inference models.
 
@@ -170,11 +170,11 @@ NIL
     ```bash
     cd <vsl-ai-client-dir>/example/common/attester
 
-    ./prerequisite.sh 
+    inference/src/prerequisite.sh 
     # Run the above command only if necessary.
     # This will install necessary libraries for image classification computation.
 
-    ./dl-inference-models.sh
+    inference/src/dl-inference-models.sh
     # Run the above command only if necessary.
     # This will download the necessary inference models.
 
